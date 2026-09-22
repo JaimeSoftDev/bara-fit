@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Trash2, Video } from "lucide-react";
+import { Pencil, Play, Plus, Trash2, Video } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import { useDb } from "../../store/db";
 import { getExercisesOfTrainer } from "../../lib/queries";
@@ -8,8 +8,10 @@ import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
+import { VideoModal } from "../../components/VideoModal";
 import { Field, Input, Select, Textarea } from "../../components/ui/Field";
 import { id } from "../../lib/id";
+import { getYouTubeThumbnail } from "../../lib/youtube";
 import type { Exercise, MuscleGroup } from "../../types";
 
 const MUSCLE_GROUPS: MuscleGroup[] = ["Pecho", "Espalda", "Piernas", "Hombros", "Brazos", "Core", "Cardio", "Movilidad"];
@@ -28,6 +30,7 @@ export default function TrainerExercises() {
   const [form, setForm] = useState(emptyForm);
   const [filter, setFilter] = useState<MuscleGroup | "Todos">("Todos");
   const [showModal, setShowModal] = useState(false);
+  const [videoPreview, setVideoPreview] = useState<{ title: string; url: string } | null>(null);
 
   const filtered = filter === "Todos" ? exercises : exercises.filter((e) => e.muscleGroup === filter);
 
@@ -91,41 +94,59 @@ export default function TrainerExercises() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((ex) => (
-          <Card key={ex.id}>
-            <CardBody>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">{ex.name}</p>
-                  <p className="text-xs text-slate-400">{ex.equipment || "Sin equipo"}</p>
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    onClick={() => openEdit(ex)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => deleteExercise(ex.id)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Badge tone="brand">{ex.muscleGroup}</Badge>
-                {ex.videoUrl && (
-                  <span className="flex items-center gap-1 text-xs text-slate-400">
-                    <Video size={12} /> Video
+        {filtered.map((ex) => {
+          const thumbnail = ex.videoUrl ? getYouTubeThumbnail(ex.videoUrl) : null;
+          return (
+            <Card key={ex.id} className="overflow-hidden">
+              {ex.videoUrl && (
+                <button
+                  onClick={() => setVideoPreview({ title: ex.name, url: ex.videoUrl! })}
+                  className="group relative block h-36 w-full bg-slate-900"
+                  aria-label={`Ver vídeo de ${ex.name}`}
+                >
+                  {thumbnail ? (
+                    <img src={thumbnail} alt="" className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-slate-500">
+                      <Video size={24} />
+                    </div>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-brand-600 shadow-md transition-transform group-hover:scale-110">
+                      <Play size={18} className="ml-0.5" fill="currentColor" />
+                    </span>
                   </span>
-                )}
-              </div>
-              {ex.notes && <p className="mt-2 text-xs text-slate-500">{ex.notes}</p>}
-            </CardBody>
-          </Card>
-        ))}
+                </button>
+              )}
+              <CardBody>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{ex.name}</p>
+                    <p className="text-xs text-slate-400">{ex.equipment || "Sin equipo"}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => openEdit(ex)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteExercise(ex.id)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge tone="brand">{ex.muscleGroup}</Badge>
+                </div>
+                {ex.notes && <p className="mt-2 text-xs text-slate-500">{ex.notes}</p>}
+              </CardBody>
+            </Card>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="col-span-full py-10 text-center text-sm text-slate-400">No hay ejercicios en esta categoría.</p>
         )}
@@ -163,6 +184,10 @@ export default function TrainerExercises() {
             </Button>
           </form>
         </Modal>
+      )}
+
+      {videoPreview && (
+        <VideoModal title={videoPreview.title} url={videoPreview.url} onClose={() => setVideoPreview(null)} />
       )}
     </div>
   );

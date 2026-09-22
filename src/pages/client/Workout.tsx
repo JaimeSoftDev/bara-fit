@@ -7,6 +7,7 @@ import { getWorkoutPlansOfClient } from "../../lib/queries";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
+import { VideoModal } from "../../components/VideoModal";
 import { cx } from "../../lib/utils";
 
 export default function ClientWorkout() {
@@ -18,6 +19,7 @@ export default function ClientWorkout() {
   const plans = getWorkoutPlansOfClient(db, clientId);
   const plan = plans.find((p) => p.status === "active") ?? plans[0];
   const [activeDayId, setActiveDayId] = useState(plan?.days[0]?.id);
+  const [videoPreview, setVideoPreview] = useState<{ title: string; url: string } | null>(null);
   const today = formatISO(new Date(), { representation: "date" });
 
   if (!plan) {
@@ -91,9 +93,13 @@ export default function ClientWorkout() {
                 <div className="flex shrink-0 items-center gap-2">
                   {exercise?.muscleGroup && <Badge tone="slate">{exercise.muscleGroup}</Badge>}
                   {exercise?.videoUrl && (
-                    <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-brand-600">
+                    <button
+                      onClick={() => setVideoPreview({ title: exercise.name, url: exercise.videoUrl! })}
+                      className="text-slate-400 hover:text-brand-600"
+                      aria-label="Ver vídeo"
+                    >
                       <Video size={16} />
-                    </a>
+                    </button>
                   )}
                 </div>
               </CardBody>
@@ -101,6 +107,10 @@ export default function ClientWorkout() {
           );
         })}
       </div>
+
+      {videoPreview && (
+        <VideoModal title={videoPreview.title} url={videoPreview.url} onClose={() => setVideoPreview(null)} />
+      )}
     </div>
   );
 }

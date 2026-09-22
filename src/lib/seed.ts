@@ -100,6 +100,12 @@ export function buildSeed(): Database {
     ["Zancadas", "Piernas", "Mancuernas"],
     ["Carrera continua", "Cardio", "Ninguno"],
   ];
+  const videoUrls: Partial<Record<string, string>> = {
+    "Sentadilla trasera": "https://www.youtube.com/watch?v=PbrlKe246E8",
+    "Press banca": "https://www.youtube.com/watch?v=uRyOpJkStSI",
+    Dominadas: "https://www.youtube.com/watch?v=637SzIkGrIg",
+  };
+
   const exercises: Record<string, Exercise> = {};
   const exId: Record<string, string> = {};
   for (const [name, muscleGroup, equipment] of exerciseDefs) {
@@ -111,6 +117,7 @@ export function buildSeed(): Database {
       name,
       muscleGroup,
       equipment,
+      videoUrl: videoUrls[name],
       notes: "",
     };
   }
