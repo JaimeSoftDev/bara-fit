@@ -33,3 +33,8 @@ npm run dev
 ```
 
 Credenciales de las cuentas de ejemplo sembradas por el backend: ver `backend/README.md`.
+
+## Despliegue
+
+Ver [`DEPLOYMENT.md`](DEPLOYMENT.md): GitHub Actions compila el frontend y actualiza
+el backend automáticamente por SSH en cada push — el servidor nunca necesita Node.js.

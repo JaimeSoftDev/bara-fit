@@ -1,0 +1,43 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync backend source over SSH
+        uses: easingthemes/ssh-deploy@v5
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          REMOTE_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+          REMOTE_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          REMOTE_TARGET: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+          SOURCE: "backend/"
+          EXCLUDE: "/vendor/, /.env, /storage/, /database/database.sqlite, /node_modules/, /.git/"
+          ARGS: "-avzr --delete"
+
+      - name: Run deploy commands on the server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          script: |
+            cd ${{ secrets.HOSTINGER_BACKEND_PATH }}
+            composer install --no-dev --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan storage:link || true
