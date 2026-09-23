@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\ClientProfile;
 use App\Models\Conversation;
 use App\Models\Exercise;
+use App\Models\Form;
 use App\Models\Invoice;
 use App\Models\NutritionPlan;
 use App\Models\PayrollEntry;
@@ -378,6 +379,94 @@ class DatabaseSeeder extends Seeder
             'period_label' => 'Septiembre 2026',
             'amount' => 980.00,
             'status' => 'pending',
+        ]);
+
+        // ---------------------------------------------------------------
+        // Custom forms (PAR-Q intake + a simple check-in), assigned to clients
+        // ---------------------------------------------------------------
+        $parq = Form::create([
+            'trainer_id' => $carlos->id,
+            'title' => 'Cuestionario PAR-Q inicial',
+            'description' => 'Cuestionario de aptitud para la actividad física, a completar antes de empezar a entrenar.',
+        ]);
+        $parqFields = [
+            ['label' => '¿Te ha dicho alguna vez un médico que padeces una enfermedad cardíaca?', 'type' => 'yesno', 'required' => true],
+            ['label' => '¿Sientes dolor en el pecho cuando realizas actividad física?', 'type' => 'yesno', 'required' => true],
+            ['label' => '¿Has perdido el equilibrio o el conocimiento en el último año?', 'type' => 'yesno', 'required' => true],
+            ['label' => '¿Tienes algún problema óseo o articular que pueda agravarse con el ejercicio?', 'type' => 'yesno', 'required' => true],
+            ['label' => '¿Te han recetado medicación para la tensión arterial o el corazón?', 'type' => 'yesno', 'required' => true],
+            ['label' => '¿Cuál es tu nivel de actividad física actual?', 'type' => 'select', 'required' => true, 'options' => ['Sedentario', 'Ligero', 'Moderado', 'Alto']],
+            ['label' => '¿Qué objetivos te gustaría marcar como prioritarios?', 'type' => 'checkbox', 'required' => false, 'options' => ['Perder grasa', 'Ganar músculo', 'Mejorar resistencia', 'Salud general', 'Rendimiento deportivo']],
+            ['label' => 'Fecha de nacimiento', 'type' => 'date', 'required' => true],
+            ['label' => 'Peso actual (kg)', 'type' => 'number', 'required' => true],
+            ['label' => 'Comentarios adicionales sobre tu salud', 'type' => 'textarea', 'required' => false],
+        ];
+        foreach ($parqFields as $index => $field) {
+            $parq->fields()->create([
+                'label' => $field['label'],
+                'type' => $field['type'],
+                'required' => $field['required'],
+                'options' => $field['options'] ?? null,
+                'position' => $index,
+            ]);
+        }
+
+        $checkin = Form::create([
+            'trainer_id' => $carlos->id,
+            'title' => 'Check-in mensual',
+            'description' => 'Breve seguimiento mensual de sensaciones y adherencia al plan.',
+        ]);
+        $checkinFields = [
+            ['label' => '¿Cómo te has sentido este mes?', 'type' => 'select', 'required' => true, 'options' => ['Muy bien', 'Bien', 'Regular', 'Mal']],
+            ['label' => '¿Has podido cumplir con las sesiones planificadas?', 'type' => 'yesno', 'required' => true],
+            ['label' => 'Notas para tu entrenador', 'type' => 'textarea', 'required' => false],
+        ];
+        foreach ($checkinFields as $index => $field) {
+            $checkin->fields()->create([
+                'label' => $field['label'],
+                'type' => $field['type'],
+                'required' => $field['required'],
+                'options' => $field['options'] ?? null,
+                'position' => $index,
+            ]);
+        }
+
+        // Lucía: PAR-Q assigned and already completed.
+        $luciaParqAssignment = $parq->assignments()->create([
+            'client_id' => $lucia->id,
+            'status' => 'completed',
+            'assigned_at' => Carbon::now()->subDays(10),
+            'completed_at' => Carbon::now()->subDays(9),
+        ]);
+        $parqFieldIds = $parq->fields()->orderBy('position')->pluck('id');
+        $luciaParqAssignment->submission()->create([
+            'answers' => [
+                (string) $parqFieldIds[0] => 'no',
+                (string) $parqFieldIds[1] => 'no',
+                (string) $parqFieldIds[2] => 'no',
+                (string) $parqFieldIds[3] => 'no',
+                (string) $parqFieldIds[4] => 'no',
+                (string) $parqFieldIds[5] => 'Moderado',
+                (string) $parqFieldIds[6] => ['Ganar músculo', 'Mejorar resistencia'],
+                (string) $parqFieldIds[7] => '1996-04-12',
+                (string) $parqFieldIds[8] => 63.5,
+                (string) $parqFieldIds[9] => 'Sin lesiones previas relevantes.',
+            ],
+            'submitted_at' => Carbon::now()->subDays(9),
+        ]);
+
+        // Marcos: PAR-Q assigned, still pending.
+        $parq->assignments()->create([
+            'client_id' => $marcos->id,
+            'status' => 'pending',
+            'assigned_at' => Carbon::now()->subDays(2),
+        ]);
+
+        // Lucía also has the monthly check-in pending.
+        $checkin->assignments()->create([
+            'client_id' => $lucia->id,
+            'status' => 'pending',
+            'assigned_at' => Carbon::now()->subDay(),
         ]);
     }
 }

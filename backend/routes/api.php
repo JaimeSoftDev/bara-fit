@@ -7,6 +7,8 @@ use App\Http\Controllers\BusinessInviteController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ExerciseController;
+use App\Http\Controllers\FormAssignmentController;
+use App\Http\Controllers\FormController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NutritionPlanController;
@@ -91,4 +93,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Push subscriptions
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+
+    // Forms (custom intake questionnaires)
+    Route::get('/forms', [FormController::class, 'index']);
+    Route::post('/forms', [FormController::class, 'store']);
+    Route::get('/forms/{form}', [FormController::class, 'show']);
+    Route::put('/forms/{form}', [FormController::class, 'update']);
+    Route::delete('/forms/{form}', [FormController::class, 'destroy']);
+    Route::post('/forms/{form}/assign', [FormController::class, 'assign']);
+
+    // Form assignments / submissions
+    Route::get('/form-assignments', [FormAssignmentController::class, 'index']);
+    Route::post('/form-assignments/{formAssignment}/submit', [FormAssignmentController::class, 'submit']);
+    Route::get('/form-assignments/{formAssignment}/submission', [FormAssignmentController::class, 'submission']);
 });

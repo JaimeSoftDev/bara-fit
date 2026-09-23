@@ -7,6 +7,8 @@ use App\Models\Business;
 use App\Models\ClientProfile;
 use App\Models\Conversation;
 use App\Models\Exercise;
+use App\Models\Form;
+use App\Models\FormAssignment;
 use App\Models\Invoice;
 use App\Models\NutritionPlan;
 use App\Models\ProgressEntry;
@@ -16,6 +18,8 @@ use App\Policies\BusinessPolicy;
 use App\Policies\ClientProfilePolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\ExercisePolicy;
+use App\Policies\FormAssignmentPolicy;
+use App\Policies\FormPolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\NutritionPlanPolicy;
 use App\Policies\ProgressEntryPolicy;
@@ -47,5 +51,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(ClientProfile::class, ClientProfilePolicy::class);
         Gate::policy(Business::class, BusinessPolicy::class);
+        Gate::policy(Form::class, FormPolicy::class);
+        Gate::policy(FormAssignment::class, FormAssignmentPolicy::class);
     }
 }

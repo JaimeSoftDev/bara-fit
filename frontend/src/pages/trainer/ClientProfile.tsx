@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, ClipboardList, Plus } from "lucide-react";
 import { formatISO } from "date-fns";
 import { useClient } from "../../hooks/useClients";
 import { useExercises } from "../../hooks/useExercises";
@@ -8,19 +8,32 @@ import { useProgressEntries } from "../../hooks/useProgress";
 import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus } from "../../hooks/useInvoices";
 import { useNutritionPlans, useSaveNutritionPlan } from "../../hooks/useNutritionPlans";
 import { useWorkoutPlans, useSaveWorkoutPlan } from "../../hooks/useWorkoutPlans";
+import {
+  useAssignForm,
+  useFormAssignments,
+  useFormAssignmentSubmission,
+  useForms,
+} from "../../hooks/useForms";
 import { Avatar } from "../../components/ui/Avatar";
 import { Badge } from "../../components/ui/Badge";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
-import { Field, Input } from "../../components/ui/Field";
+import { Field, Input, Select } from "../../components/ui/Field";
 import { cx, formatCurrency, formatDate } from "../../lib/utils";
 import { ProgressChart } from "../../components/ProgressChart";
 import { WorkoutPlanEditor } from "../../components/trainer/WorkoutPlanEditor";
 import { NutritionPlanEditor } from "../../components/trainer/NutritionPlanEditor";
-import type { InvoiceStatus } from "../../types";
+import type { FormAnswerDetail, InvoiceStatus } from "../../types";
 
-const TABS = ["Resumen", "Rutina", "Nutrición", "Pagos"] as const;
+const TABS = ["Resumen", "Rutina", "Nutrición", "Pagos", "Formularios"] as const;
+
+function formatAnswerValue(answer: FormAnswerDetail): string {
+  if (answer.value === null || answer.value === undefined || answer.value === "") return "—";
+  if (answer.type === "yesno") return answer.value === "yes" || answer.value === "Sí" ? "Sí" : "No";
+  if (Array.isArray(answer.value)) return answer.value.length ? answer.value.join(", ") : "—";
+  return String(answer.value);
+}
 
 export default function TrainerClientProfile() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -34,10 +47,17 @@ export default function TrainerClientProfile() {
   const saveNutritionPlan = useSaveNutritionPlan(clientId);
   const createInvoice = useCreateInvoice();
   const updateInvoiceStatus = useUpdateInvoiceStatus();
+  const { data: forms = [] } = useForms();
+  const { data: formAssignments = [] } = useFormAssignments(clientId);
+  const assignForm = useAssignForm();
 
   const [tab, setTab] = useState<(typeof TABS)[number]>("Resumen");
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({ concept: "", amount: "50", dueDate: "" });
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignFormId, setAssignFormId] = useState("");
+  const [viewingAssignmentId, setViewingAssignmentId] = useState<string | null>(null);
+  const { data: submission } = useFormAssignmentSubmission(viewingAssignmentId ?? undefined);
 
   const nutritionPlan = nutritionPlans[0];
   const activePlan = useMemo(
@@ -69,6 +89,20 @@ export default function TrainerClientProfile() {
       fatG: 60,
       meals: [],
     });
+  }
+
+  function handleAssignForm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!assignFormId) return;
+    assignForm.mutate(
+      { formId: assignFormId, clientIds: [clientId!] },
+      {
+        onSuccess: () => {
+          setAssignFormId("");
+          setShowAssignModal(false);
+        },
+      },
+    );
   }
 
   function handleAddInvoice(e: React.FormEvent) {
@@ -231,6 +265,97 @@ export default function TrainerClientProfile() {
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {tab === "Formularios" && (
+        <Card>
+          <CardBody>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Formularios asignados</h3>
+              <Button variant="secondary" onClick={() => setShowAssignModal(true)} disabled={forms.length === 0}>
+                <Plus size={16} /> Asignar formulario
+              </Button>
+            </div>
+            {forms.length === 0 && (
+              <p className="mb-3 text-xs text-slate-400">
+                Todavía no has creado ningún formulario. Crea uno en la sección{" "}
+                <Link to="/trainer/forms" className="text-brand-600 hover:underline">
+                  Formularios
+                </Link>
+                .
+              </p>
+            )}
+            <div className="space-y-2">
+              {formAssignments.length === 0 && (
+                <p className="text-sm text-slate-400">Sin formularios asignados todavía.</p>
+              )}
+              {formAssignments.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <ClipboardList size={16} className="shrink-0 text-brand-600" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{a.form?.title}</p>
+                      <p className="text-xs text-slate-400">Asignado {formatDate(a.assignedAt)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={a.status === "completed" ? "green" : "amber"}>
+                      {a.status === "completed" ? "Completado" : "Pendiente"}
+                    </Badge>
+                    {a.status === "completed" && (
+                      <Button variant="ghost" onClick={() => setViewingAssignmentId(a.id)}>
+                        Ver respuestas
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {showAssignModal && (
+        <Modal title="Asignar formulario" onClose={() => setShowAssignModal(false)}>
+          <form onSubmit={handleAssignForm} className="space-y-3">
+            <Field label="Formulario">
+              <Select required value={assignFormId} onChange={(e) => setAssignFormId(e.target.value)}>
+                <option value="" disabled>
+                  Selecciona un formulario
+                </option>
+                {forms.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button type="submit" className="w-full" disabled={assignForm.isPending}>
+              Asignar a {client.name}
+            </Button>
+          </form>
+        </Modal>
+      )}
+
+      {viewingAssignmentId && (
+        <Modal title="Respuestas del formulario" onClose={() => setViewingAssignmentId(null)} wide>
+          {!submission ? (
+            <p className="text-sm text-slate-400">Cargando respuestas…</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-400">Enviado el {formatDate(submission.submittedAt)}</p>
+              {submission.answerDetails.map((answer) => (
+                <div key={answer.fieldId} className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-medium text-slate-500">{answer.label}</p>
+                  <p className="text-sm text-slate-900">{formatAnswerValue(answer)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
       )}
 
       {showInvoiceModal && (

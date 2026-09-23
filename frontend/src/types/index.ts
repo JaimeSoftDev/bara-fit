@@ -200,3 +200,53 @@ export interface Invoice {
   dueDate: string;
   paidAt?: string;
 }
+
+export type FormFieldType = "text" | "textarea" | "number" | "date" | "yesno" | "select" | "checkbox";
+
+export interface FormField {
+  id: string;
+  label: string;
+  type: FormFieldType;
+  required: boolean;
+  options: string[];
+  position: number;
+}
+
+export interface Form {
+  id: string;
+  trainerId: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+}
+
+export type FormAssignmentStatus = "pending" | "completed";
+
+export interface FormAssignment {
+  id: string;
+  formId: string;
+  clientId: string;
+  status: FormAssignmentStatus;
+  assignedAt: string;
+  completedAt?: string;
+  form?: Form;
+  client?: BaseUser;
+}
+
+// Answers keyed by field id. A checkbox answer is a string[]; other types are strings/numbers.
+export type FormAnswers = Record<string, string | number | string[] | null>;
+
+export interface FormAnswerDetail {
+  fieldId: string;
+  label?: string;
+  type?: FormFieldType;
+  value: string | number | string[] | null;
+}
+
+export interface FormSubmission {
+  id: string;
+  formAssignmentId: string;
+  answers: FormAnswers;
+  answerDetails: FormAnswerDetail[];
+  submittedAt: string;
+}
