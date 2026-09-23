@@ -1,12 +1,8 @@
 import { Link } from "react-router-dom";
 import { CalendarClock, Dumbbell, Users, Wallet } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useCurrentDb } from "../../store/db";
-import {
-  getBookingsOfTrainer,
-  getClientsOfTrainer,
-  getInvoicesOfTrainer,
-} from "../../lib/queries";
+import { useClients } from "../../hooks/useClients";
+import { useBookings } from "../../hooks/useBookings";
+import { useInvoices } from "../../hooks/useInvoices";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
@@ -15,13 +11,9 @@ import { Badge } from "../../components/ui/Badge";
 import { formatCurrency, formatDateLong, formatTime } from "../../lib/utils";
 
 export default function TrainerDashboard() {
-  const { currentUserId } = useAuth();
-  const db = useCurrentDb();
-  const trainerId = currentUserId!;
-
-  const clients = getClientsOfTrainer(db, trainerId);
-  const bookings = getBookingsOfTrainer(db, trainerId);
-  const invoices = getInvoicesOfTrainer(db, trainerId);
+  const { data: clients = [] } = useClients();
+  const { data: bookings = [] } = useBookings();
+  const { data: invoices = [] } = useInvoices();
 
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.startsAt) >= now && b.status !== "cancelled").slice(0, 4);
@@ -64,14 +56,19 @@ export default function TrainerDashboard() {
           <CardBody className="space-y-3">
             {upcoming.length === 0 && <p className="text-sm text-slate-400">No tienes sesiones próximas.</p>}
             {upcoming.map((b) => {
-              const client = db.users[b.clientId];
+              const attendeeLabel =
+                b.attendees.length === 0
+                  ? "Sin confirmar"
+                  : b.attendees.length === 1
+                    ? b.attendees[0].name
+                    : `${b.attendees[0].name} +${b.attendees.length - 1}`;
               return (
                 <div key={b.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">
-                  <Avatar name={client?.name ?? "?"} size={36} />
+                  <Avatar name={b.attendees[0]?.name ?? "?"} size={36} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-900">{b.title}</p>
                     <p className="text-xs text-slate-400">
-                      {client?.name} · {formatDateLong(b.startsAt)} · {formatTime(b.startsAt)}
+                      {attendeeLabel} · {formatDateLong(b.startsAt)} · {formatTime(b.startsAt)}
                     </p>
                   </div>
                   <Badge tone={b.type === "class" ? "brand" : "slate"}>

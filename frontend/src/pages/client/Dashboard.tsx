@@ -1,29 +1,30 @@
 import { Link } from "react-router-dom";
 import { Apple, CalendarDays, Dumbbell, Wallet } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useCurrentDb } from "../../store/db";
-import {
-  getActiveWorkoutPlan,
-  getBookingsOfClient,
-  getInvoicesOfClient,
-  getNutritionPlanOfClient,
-  getProgressOfClient,
-} from "../../lib/queries";
+import { useSession } from "../../store/session";
+import { useWorkoutPlans } from "../../hooks/useWorkoutPlans";
+import { useNutritionPlans } from "../../hooks/useNutritionPlans";
+import { useBookings } from "../../hooks/useBookings";
+import { useProgressEntries } from "../../hooks/useProgress";
+import { useInvoices } from "../../hooks/useInvoices";
+import { useExercises } from "../../hooks/useExercises";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { formatDateLong, formatTime } from "../../lib/utils";
 
 export default function ClientDashboard() {
-  const { currentUserId } = useAuth();
-  const db = useCurrentDb();
-  const clientId = currentUserId!;
+  const clientId = useSession((s) => s.user!.id);
 
-  const plan = getActiveWorkoutPlan(db, clientId);
-  const nutrition = getNutritionPlanOfClient(db, clientId);
-  const bookings = getBookingsOfClient(db, clientId);
-  const progress = getProgressOfClient(db, clientId);
-  const invoices = getInvoicesOfClient(db, clientId);
+  const { data: plans = [] } = useWorkoutPlans(clientId);
+  const { data: nutritionPlans = [] } = useNutritionPlans(clientId);
+  const { data: bookings = [] } = useBookings();
+  const { data: progress = [] } = useProgressEntries(clientId);
+  const { data: invoices = [] } = useInvoices(clientId);
+  const { data: exercises = [] } = useExercises();
+  const exercisesById = new Map(exercises.map((e) => [e.id, e]));
+
+  const plan = plans.find((p) => p.status === "active") ?? plans[0];
+  const nutrition = nutritionPlans[0];
 
   const now = new Date();
   const nextBooking = bookings.find((b) => new Date(b.startsAt) >= now && b.status === "confirmed");
@@ -56,7 +57,7 @@ export default function ClientDashboard() {
                   <div className="mt-2 space-y-1.5">
                     <p className="text-xs font-semibold text-slate-500">{todayDay.label}</p>
                     {todayDay.items.slice(0, 4).map((it) => {
-                      const ex = db.exercises[it.exerciseId];
+                      const ex = exercisesById.get(it.exerciseId);
                       return (
                         <p key={it.id} className="text-xs text-slate-500">
                           {ex?.name} · {it.sets}x{it.reps}

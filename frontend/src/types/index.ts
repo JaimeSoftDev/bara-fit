@@ -13,7 +13,6 @@ export interface TrainerProfile extends BaseUser {
   role: "trainer";
   specialties: string[];
   bio: string;
-  clientIds: string[];
   brandColor?: string;
 }
 
@@ -111,11 +110,22 @@ export interface NutritionPlan {
 
 export type BookingType = "session" | "class";
 export type BookingStatus = "confirmed" | "pending" | "cancelled" | "completed";
+export type AttendeeStatus = "confirmed" | "pending" | "cancelled";
+
+export interface BookingAttendee {
+  clientId: string;
+  name: string;
+  status: AttendeeStatus;
+}
+
+export interface Recurrence {
+  freq: "weekly";
+  until: string; // ISO date
+}
 
 export interface Booking {
   id: string;
   trainerId: string;
-  clientId: string;
   title: string;
   type: BookingType;
   startsAt: string; // ISO datetime
@@ -123,6 +133,17 @@ export interface Booking {
   status: BookingStatus;
   location: string;
   notes?: string;
+  capacity: number | null; // null = 1:1 session, otherwise max attendees for a class
+  attendees: BookingAttendee[];
+  attendeeCount: number;
+  seriesId?: string;
+}
+
+export interface Invite {
+  name: string;
+  email: string;
+  trainerName: string;
+  status: "pending" | "accepted" | "expired";
 }
 
 export interface Measurements {

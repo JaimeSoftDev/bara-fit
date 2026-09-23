@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { formatISO } from "date-fns";
 import { Check, Video } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getWorkoutPlansOfClient } from "../../lib/queries";
+import { useSession } from "../../store/session";
+import { useWorkoutCompletions, useSetWorkoutCompletion, useWorkoutPlans } from "../../hooks/useWorkoutPlans";
+import { useExercises } from "../../hooks/useExercises";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -11,16 +11,18 @@ import { VideoModal } from "../../components/VideoModal";
 import { cx } from "../../lib/utils";
 
 export default function ClientWorkout() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const setWorkoutCompletion = useDb((s) => s.setWorkoutCompletion);
-  const clientId = currentUserId!;
+  const clientId = useSession((s) => s.user!.id);
+  const { data: plans = [] } = useWorkoutPlans(clientId);
+  const { data: exercises = [] } = useExercises();
+  const exercisesById = new Map(exercises.map((e) => [e.id, e]));
 
-  const plans = getWorkoutPlansOfClient(db, clientId);
   const plan = plans.find((p) => p.status === "active") ?? plans[0];
-  const [activeDayId, setActiveDayId] = useState(plan?.days[0]?.id);
+  const [activeDayId, setActiveDayId] = useState<string | undefined>(undefined);
   const [videoPreview, setVideoPreview] = useState<{ title: string; url: string } | null>(null);
   const today = formatISO(new Date(), { representation: "date" });
+
+  const { data: completions = [] } = useWorkoutCompletions(plan?.id);
+  const setCompletion = useSetWorkoutCompletion(plan?.id);
 
   if (!plan) {
     return (
@@ -32,9 +34,7 @@ export default function ClientWorkout() {
   }
 
   const day = plan.days.find((d) => d.id === activeDayId) ?? plan.days[0];
-  const completion = Object.values(db.workoutCompletions).find(
-    (w) => w.clientId === clientId && w.planId === plan.id && w.dayId === day?.id && w.date === today,
-  );
+  const completion = completions.find((w) => w.dayId === day?.id && w.date === today);
   const completedIds = new Set(completion?.completedItemIds ?? []);
 
   function toggleItem(itemId: string) {
@@ -42,7 +42,7 @@ export default function ClientWorkout() {
     const next = new Set(completedIds);
     if (next.has(itemId)) next.delete(itemId);
     else next.add(itemId);
-    setWorkoutCompletion(clientId, plan.id, day.id, today, Array.from(next));
+    setCompletion.mutate({ dayId: day.id, date: today, completedItemIds: Array.from(next) });
   }
 
   return (
@@ -66,7 +66,7 @@ export default function ClientWorkout() {
 
       <div className="space-y-2">
         {day?.items.map((item) => {
-          const exercise = db.exercises[item.exerciseId];
+          const exercise = exercisesById.get(item.exerciseId);
           const done = completedIds.has(item.id);
           return (
             <Card key={item.id} className={cx(done && "border-emerald-200 bg-emerald-50/50")}>

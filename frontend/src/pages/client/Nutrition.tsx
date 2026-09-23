@@ -1,6 +1,5 @@
-import { useAuth } from "../../store/auth";
-import { useCurrentDb } from "../../store/db";
-import { getNutritionPlanOfClient } from "../../lib/queries";
+import { useSession } from "../../store/session";
+import { useNutritionPlans } from "../../hooks/useNutritionPlans";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 
@@ -20,10 +19,9 @@ function MacroBar({ label, value, max, color }: { label: string; value: number; 
 }
 
 export default function ClientNutrition() {
-  const { currentUserId } = useAuth();
-  const db = useCurrentDb();
-  const clientId = currentUserId!;
-  const plan = getNutritionPlanOfClient(db, clientId);
+  const clientId = useSession((s) => s.user!.id);
+  const { data: plans = [] } = useNutritionPlans(clientId);
+  const plan = plans[0];
 
   if (!plan) {
     return (

@@ -1,6 +1,5 @@
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getInvoicesOfClient } from "../../lib/queries";
+import { useSession } from "../../store/session";
+import { useInvoices, useUpdateInvoiceStatus } from "../../hooks/useInvoices";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -9,11 +8,9 @@ import { formatCurrency, formatDate } from "../../lib/utils";
 import type { InvoiceStatus } from "../../types";
 
 export default function ClientPayments() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const markInvoiceStatus = useDb((s) => s.markInvoiceStatus);
-  const clientId = currentUserId!;
-  const invoices = getInvoicesOfClient(db, clientId);
+  const clientId = useSession((s) => s.user!.id);
+  const { data: invoices = [] } = useInvoices(clientId);
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
 
   const statusTone: Record<InvoiceStatus, "green" | "amber" | "red"> = { paid: "green", pending: "amber", overdue: "red" };
   const statusLabel: Record<InvoiceStatus, string> = { paid: "Pagada", pending: "Pendiente", overdue: "Vencida" };
@@ -33,7 +30,7 @@ export default function ClientPayments() {
               <span className="text-sm font-semibold text-slate-900">{formatCurrency(inv.amount)}</span>
               <Badge tone={statusTone[inv.status]}>{statusLabel[inv.status]}</Badge>
               {inv.status !== "paid" && (
-                <Button onClick={() => markInvoiceStatus(inv.id, "paid")}>Pagar ahora</Button>
+                <Button onClick={() => updateInvoiceStatus.mutate({ id: inv.id, status: "paid" })}>Pagar ahora</Button>
               )}
             </CardBody>
           </Card>

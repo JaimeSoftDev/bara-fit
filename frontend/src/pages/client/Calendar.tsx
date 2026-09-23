@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { formatISO } from "date-fns";
-import { Plus } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getBookingsOfClient } from "../../lib/queries";
+import { Plus, Users } from "lucide-react";
+import { useSession } from "../../store/session";
+import { useAvailableClasses, useBookings, useCreateBooking, useJoinBooking } from "../../hooks/useBookings";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -12,15 +11,16 @@ import { Modal } from "../../components/ui/Modal";
 import { Field, Input } from "../../components/ui/Field";
 import { formatDateLong, formatTime } from "../../lib/utils";
 
-export default function ClientCalendar() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const addBooking = useDb((s) => s.addBooking);
-  const clientId = currentUserId!;
-  const client = db.users[clientId];
-  const trainerId = client && client.role === "client" ? client.trainerId : "";
+const STATUS_LABEL = { confirmed: "Confirmada", pending: "Pendiente", cancelled: "Cancelada", completed: "Completada" } as const;
+const STATUS_TONE = { confirmed: "green", pending: "amber", cancelled: "red", completed: "slate" } as const;
 
-  const bookings = getBookingsOfClient(db, clientId);
+export default function ClientCalendar() {
+  const clientId = useSession((s) => s.user!.id);
+  const { data: bookings = [] } = useBookings();
+  const { data: availableClasses = [] } = useAvailableClasses();
+  const createBooking = useCreateBooking();
+  const joinBooking = useJoinBooking();
+
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: "Sesión solicitada", date: "", time: "10:00" });
 
@@ -30,18 +30,22 @@ export default function ClientCalendar() {
     const start = new Date(`${form.date}T${form.time}`);
     const end = new Date(start);
     end.setMinutes(end.getMinutes() + 60);
-    addBooking({
-      trainerId,
-      clientId,
-      title: form.title,
-      type: "session",
-      startsAt: formatISO(start),
-      endsAt: formatISO(end),
-      status: "pending",
-      location: "Por confirmar",
-    });
-    setShowModal(false);
-    setForm({ title: "Sesión solicitada", date: "", time: "10:00" });
+    createBooking.mutate(
+      {
+        title: form.title,
+        type: "session",
+        startsAt: formatISO(start),
+        endsAt: formatISO(end),
+        location: "Por confirmar",
+        clientId,
+      },
+      {
+        onSuccess: () => {
+          setShowModal(false);
+          setForm({ title: "Sesión solicitada", date: "", time: "10:00" });
+        },
+      },
+    );
   }
 
   return (
@@ -56,6 +60,33 @@ export default function ClientCalendar() {
         }
       />
 
+      {availableClasses.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold text-slate-900">Clases disponibles</h2>
+          <div className="space-y-2">
+            {availableClasses.map((c) => (
+              <Card key={c.id}>
+                <CardBody className="flex flex-wrap items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">{c.title}</p>
+                    <p className="text-xs text-slate-400">
+                      {formatDateLong(c.startsAt)} · {formatTime(c.startsAt)} · {c.location}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <Users size={13} /> {c.attendeeCount}/{c.capacity}
+                  </span>
+                  <Button variant="secondary" onClick={() => joinBooking.mutate({ id: c.id })}>
+                    Unirme
+                  </Button>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="mb-2 text-sm font-semibold text-slate-900">Mis reservas</h2>
       <div className="space-y-2">
         {bookings.length === 0 && <p className="text-sm text-slate-400">No tienes reservas todavía.</p>}
         {bookings.map((b) => (
@@ -68,13 +99,7 @@ export default function ClientCalendar() {
                 </p>
               </div>
               <Badge tone={b.type === "class" ? "brand" : "slate"}>{b.type === "class" ? "Clase" : "Sesión"}</Badge>
-              <Badge
-                tone={
-                  b.status === "confirmed" ? "green" : b.status === "completed" ? "slate" : b.status === "cancelled" ? "red" : "amber"
-                }
-              >
-                {{ confirmed: "Confirmada", pending: "Pendiente", cancelled: "Cancelada", completed: "Completada" }[b.status]}
-              </Badge>
+              <Badge tone={STATUS_TONE[b.status]}>{STATUS_LABEL[b.status]}</Badge>
             </CardBody>
           </Card>
         ))}
@@ -95,7 +120,7 @@ export default function ClientCalendar() {
               </Field>
             </div>
             <p className="text-xs text-slate-400">Tu entrenador confirmará la disponibilidad.</p>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={createBooking.isPending}>
               Enviar solicitud
             </Button>
           </form>

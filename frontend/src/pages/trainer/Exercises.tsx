@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Pencil, Play, Plus, Trash2, Video } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getExercisesOfTrainer } from "../../lib/queries";
+import { useDeleteExercise, useExercises, useSaveExercise } from "../../hooks/useExercises";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -10,7 +8,6 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { VideoModal } from "../../components/VideoModal";
 import { Field, Input, Select, Textarea } from "../../components/ui/Field";
-import { id } from "../../lib/id";
 import { getYouTubeThumbnail } from "../../lib/youtube";
 import type { Exercise, MuscleGroup } from "../../types";
 
@@ -19,12 +16,9 @@ const MUSCLE_GROUPS: MuscleGroup[] = ["Pecho", "Espalda", "Piernas", "Hombros", 
 const emptyForm = { name: "", muscleGroup: "Piernas" as MuscleGroup, equipment: "", videoUrl: "", notes: "" };
 
 export default function TrainerExercises() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const upsertExercise = useDb((s) => s.upsertExercise);
-  const deleteExercise = useDb((s) => s.deleteExercise);
-  const trainerId = currentUserId!;
-  const exercises = getExercisesOfTrainer(db, trainerId);
+  const { data: exercises = [] } = useExercises();
+  const saveExercise = useSaveExercise();
+  const deleteExercise = useDeleteExercise();
 
   const [editing, setEditing] = useState<Exercise | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -55,16 +49,17 @@ export default function TrainerExercises() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name) return;
-    upsertExercise({
-      id: editing?.id ?? id("ex"),
-      trainerId,
-      name: form.name,
-      muscleGroup: form.muscleGroup,
-      equipment: form.equipment,
-      videoUrl: form.videoUrl || undefined,
-      notes: form.notes || undefined,
-    });
-    closeModal();
+    saveExercise.mutate(
+      {
+        id: editing?.id,
+        name: form.name,
+        muscleGroup: form.muscleGroup,
+        equipment: form.equipment,
+        videoUrl: form.videoUrl || undefined,
+        notes: form.notes || undefined,
+      },
+      { onSuccess: closeModal },
+    );
   }
 
   return (
@@ -132,7 +127,7 @@ export default function TrainerExercises() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => deleteExercise(ex.id)}
+                      onClick={() => deleteExercise.mutate(ex.id)}
                       className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
                     >
                       <Trash2 size={14} />

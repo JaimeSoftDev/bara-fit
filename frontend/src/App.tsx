@@ -1,6 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import InviteAccept from "./pages/InviteAccept";
 import { RequireRole } from "./components/RequireRole";
+import { SessionBoot } from "./components/SessionBoot";
 import TrainerLayout from "./layouts/TrainerLayout";
 import ClientLayout from "./layouts/ClientLayout";
 
@@ -24,8 +27,11 @@ import ClientPayments from "./pages/client/Payments";
 function App() {
   return (
     <BrowserRouter>
+      <SessionBoot>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/invite/:token" element={<InviteAccept />} />
 
         <Route
           path="/trainer"
@@ -65,6 +71,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </SessionBoot>
     </BrowserRouter>
   );
 }

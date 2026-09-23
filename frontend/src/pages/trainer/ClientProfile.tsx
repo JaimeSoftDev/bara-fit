@@ -1,77 +1,66 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import {
-  getExercisesOfTrainer,
-  getInvoicesOfClient,
-  getProgressOfClient,
-  getWorkoutPlansOfClient,
-  getNutritionPlanOfClient,
-} from "../../lib/queries";
+import { formatISO } from "date-fns";
+import { useClient } from "../../hooks/useClients";
+import { useExercises } from "../../hooks/useExercises";
+import { useProgressEntries } from "../../hooks/useProgress";
+import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus } from "../../hooks/useInvoices";
+import { useNutritionPlans, useSaveNutritionPlan } from "../../hooks/useNutritionPlans";
+import { useWorkoutPlans, useSaveWorkoutPlan } from "../../hooks/useWorkoutPlans";
 import { Avatar } from "../../components/ui/Avatar";
 import { Badge } from "../../components/ui/Badge";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Field, Input } from "../../components/ui/Field";
-import { formatISO } from "date-fns";
 import { cx, formatCurrency, formatDate } from "../../lib/utils";
 import { ProgressChart } from "../../components/ProgressChart";
 import { WorkoutPlanEditor } from "../../components/trainer/WorkoutPlanEditor";
 import { NutritionPlanEditor } from "../../components/trainer/NutritionPlanEditor";
-import { id } from "../../lib/id";
-import type { InvoiceStatus, WorkoutPlan, NutritionPlan } from "../../types";
+import type { InvoiceStatus } from "../../types";
 
 const TABS = ["Resumen", "Rutina", "Nutrición", "Pagos"] as const;
 
 export default function TrainerClientProfile() {
   const { clientId } = useParams<{ clientId: string }>();
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const upsertWorkoutPlan = useDb((s) => s.upsertWorkoutPlan);
-  const upsertNutritionPlan = useDb((s) => s.upsertNutritionPlan);
-  const markInvoiceStatus = useDb((s) => s.markInvoiceStatus);
-  const addInvoice = useDb((s) => s.addInvoice);
-  const trainerId = currentUserId!;
+  const { data: client } = useClient(clientId);
+  const { data: exercises = [] } = useExercises();
+  const { data: progress = [] } = useProgressEntries(clientId);
+  const { data: invoices = [] } = useInvoices(clientId);
+  const { data: nutritionPlans = [] } = useNutritionPlans(clientId);
+  const { data: workoutPlans = [] } = useWorkoutPlans(clientId);
+  const saveWorkoutPlan = useSaveWorkoutPlan(clientId);
+  const saveNutritionPlan = useSaveNutritionPlan(clientId);
+  const createInvoice = useCreateInvoice();
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
 
   const [tab, setTab] = useState<(typeof TABS)[number]>("Resumen");
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({ concept: "", amount: "50", dueDate: "" });
 
-  const client = clientId ? db.users[clientId] : undefined;
-  const exercises = getExercisesOfTrainer(db, trainerId);
-  const progress = clientId ? getProgressOfClient(db, clientId) : [];
-  const invoices = clientId ? getInvoicesOfClient(db, clientId) : [];
-  const nutritionPlan = clientId ? getNutritionPlanOfClient(db, clientId) : undefined;
-  const workoutPlans = clientId ? getWorkoutPlansOfClient(db, clientId) : [];
+  const nutritionPlan = nutritionPlans[0];
   const activePlan = useMemo(
     () => workoutPlans.find((p) => p.status === "active") ?? workoutPlans[0],
     [workoutPlans],
   );
 
-  if (!client || client.role !== "client") {
+  if (!client) {
     return <p className="text-sm text-slate-500">Cliente no encontrado.</p>;
   }
 
   function createWorkoutPlan() {
-    const plan: WorkoutPlan = {
-      id: id("wp"),
-      trainerId,
+    saveWorkoutPlan.mutate({
       clientId: clientId!,
       name: "Nuevo plan de entrenamiento",
       startDate: formatISO(new Date(), { representation: "date" }),
       status: "active",
       days: [],
-    };
-    upsertWorkoutPlan(plan);
+    });
   }
 
   function createNutritionPlan() {
-    const plan: NutritionPlan = {
-      id: id("np"),
-      trainerId,
+    saveNutritionPlan.mutate({
       clientId: clientId!,
       name: "Nuevo plan nutricional",
       dailyCalories: 2000,
@@ -79,24 +68,26 @@ export default function TrainerClientProfile() {
       carbsG: 200,
       fatG: 60,
       meals: [],
-    };
-    upsertNutritionPlan(plan);
+    });
   }
 
   function handleAddInvoice(e: React.FormEvent) {
     e.preventDefault();
     if (!invoiceForm.concept || !invoiceForm.dueDate) return;
-    addInvoice({
-      trainerId,
-      clientId: clientId!,
-      concept: invoiceForm.concept,
-      amount: Number(invoiceForm.amount) || 0,
-      status: "pending",
-      issuedAt: formatISO(new Date(), { representation: "date" }),
-      dueDate: invoiceForm.dueDate,
-    });
-    setInvoiceForm({ concept: "", amount: "50", dueDate: "" });
-    setShowInvoiceModal(false);
+    createInvoice.mutate(
+      {
+        clientId: clientId!,
+        concept: invoiceForm.concept,
+        amount: Number(invoiceForm.amount) || 0,
+        dueDate: invoiceForm.dueDate,
+      },
+      {
+        onSuccess: () => {
+          setInvoiceForm({ concept: "", amount: "50", dueDate: "" });
+          setShowInvoiceModal(false);
+        },
+      },
+    );
   }
 
   const statusTone: Record<InvoiceStatus, "green" | "amber" | "red"> = {
@@ -173,7 +164,7 @@ export default function TrainerClientProfile() {
             {!activePlan ? (
               <div className="py-8 text-center">
                 <p className="mb-3 text-sm text-slate-500">Este cliente todavía no tiene un plan de entrenamiento.</p>
-                <Button onClick={createWorkoutPlan}>
+                <Button onClick={createWorkoutPlan} disabled={saveWorkoutPlan.isPending}>
                   <Plus size={16} /> Crear plan de entrenamiento
                 </Button>
               </div>
@@ -186,7 +177,7 @@ export default function TrainerClientProfile() {
                 .
               </p>
             ) : (
-              <WorkoutPlanEditor plan={activePlan} exercises={exercises} onSave={upsertWorkoutPlan} />
+              <WorkoutPlanEditor plan={activePlan} exercises={exercises} onSave={(plan) => saveWorkoutPlan.mutate(plan)} />
             )}
           </CardBody>
         </Card>
@@ -198,12 +189,12 @@ export default function TrainerClientProfile() {
             {!nutritionPlan ? (
               <div className="py-8 text-center">
                 <p className="mb-3 text-sm text-slate-500">Este cliente todavía no tiene un plan nutricional.</p>
-                <Button onClick={createNutritionPlan}>
+                <Button onClick={createNutritionPlan} disabled={saveNutritionPlan.isPending}>
                   <Plus size={16} /> Crear plan nutricional
                 </Button>
               </div>
             ) : (
-              <NutritionPlanEditor plan={nutritionPlan} onSave={upsertNutritionPlan} />
+              <NutritionPlanEditor plan={nutritionPlan} onSave={(plan) => saveNutritionPlan.mutate(plan)} />
             )}
           </CardBody>
         </Card>
@@ -230,7 +221,7 @@ export default function TrainerClientProfile() {
                     <span className="text-sm font-semibold text-slate-900">{formatCurrency(inv.amount)}</span>
                     <Badge tone={statusTone[inv.status]}>{inv.status === "paid" ? "Pagada" : inv.status === "pending" ? "Pendiente" : "Vencida"}</Badge>
                     {inv.status !== "paid" && (
-                      <Button variant="ghost" onClick={() => markInvoiceStatus(inv.id, "paid")}>
+                      <Button variant="ghost" onClick={() => updateInvoiceStatus.mutate({ id: inv.id, status: "paid" })}>
                         Marcar pagada
                       </Button>
                     )}
@@ -267,7 +258,7 @@ export default function TrainerClientProfile() {
                 onChange={(e) => setInvoiceForm((f) => ({ ...f, dueDate: e.target.value }))}
               />
             </Field>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={createInvoice.isPending}>
               Crear factura
             </Button>
           </form>

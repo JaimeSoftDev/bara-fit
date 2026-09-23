@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { formatISO } from "date-fns";
 import { Camera, Plus } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getProgressOfClient } from "../../lib/queries";
+import { useSession } from "../../store/session";
+import { useCreateProgressEntry, useProgressEntries } from "../../hooks/useProgress";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -11,41 +10,45 @@ import { Modal } from "../../components/ui/Modal";
 import { Field, Input, Textarea } from "../../components/ui/Field";
 import { ProgressChart } from "../../components/ProgressChart";
 import { formatDate } from "../../lib/utils";
-import { resizeImageToDataUrl } from "../../lib/image";
 
 export default function ClientProgress() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const addProgressEntry = useDb((s) => s.addProgressEntry);
-  const clientId = currentUserId!;
-  const entries = getProgressOfClient(db, clientId);
+  const clientId = useSession((s) => s.user!.id);
+  const { data: entries = [] } = useProgressEntries(clientId);
+  const createEntry = useCreateProgressEntry(clientId);
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ weightKg: "", bodyFatPct: "", waistCm: "", note: "" });
-  const [photo, setPhoto] = useState<string | undefined>();
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await resizeImageToDataUrl(file);
-    setPhoto(dataUrl);
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  function closeModal() {
+    setShowModal(false);
+    setForm({ weightKg: "", bodyFatPct: "", waistCm: "", note: "" });
+    setPhoto(null);
+    setPhotoPreview(null);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.weightKg) return;
-    addProgressEntry({
-      clientId,
-      date: formatISO(new Date(), { representation: "date" }),
-      weightKg: Number(form.weightKg),
-      bodyFatPct: form.bodyFatPct ? Number(form.bodyFatPct) : undefined,
-      measurements: form.waistCm ? { waistCm: Number(form.waistCm) } : undefined,
-      photoUrl: photo,
-      note: form.note || undefined,
-    });
-    setForm({ weightKg: "", bodyFatPct: "", waistCm: "", note: "" });
-    setPhoto(undefined);
-    setShowModal(false);
+    createEntry.mutate(
+      {
+        date: formatISO(new Date(), { representation: "date" }),
+        weightKg: Number(form.weightKg),
+        bodyFatPct: form.bodyFatPct ? Number(form.bodyFatPct) : undefined,
+        waistCm: form.waistCm ? Number(form.waistCm) : undefined,
+        note: form.note || undefined,
+        photo: photo ?? undefined,
+      },
+      { onSuccess: closeModal },
+    );
   }
 
   return (
@@ -93,7 +96,7 @@ export default function ClientProgress() {
       </div>
 
       {showModal && (
-        <Modal title="Nuevo registro de progreso" onClose={() => setShowModal(false)}>
+        <Modal title="Nuevo registro de progreso" onClose={closeModal}>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Peso (kg)">
@@ -126,10 +129,10 @@ export default function ClientProgress() {
                 {photo ? "Foto seleccionada" : "Subir foto"}
                 <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
               </label>
-              {photo && <img src={photo} alt="preview" className="mt-2 h-24 rounded-lg object-cover" />}
+              {photoPreview && <img src={photoPreview} alt="preview" className="mt-2 h-24 rounded-lg object-cover" />}
             </Field>
-            <Button type="submit" className="w-full">
-              Guardar registro
+            <Button type="submit" className="w-full" disabled={createEntry.isPending}>
+              {createEntry.isPending ? "Guardando..." : "Guardar registro"}
             </Button>
           </form>
         </Modal>

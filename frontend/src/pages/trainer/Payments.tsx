@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useAuth } from "../../store/auth";
-import { useDb } from "../../store/db";
-import { getInvoicesOfTrainer } from "../../lib/queries";
+import { useInvoices, useUpdateInvoiceStatus } from "../../hooks/useInvoices";
+import { useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
 import { Card, CardBody } from "../../components/ui/Card";
@@ -15,11 +14,10 @@ import type { InvoiceStatus } from "../../types";
 const FILTERS = ["Todas", "Pagadas", "Pendientes", "Vencidas"] as const;
 
 export default function TrainerPayments() {
-  const { currentUserId } = useAuth();
-  const db = useDb((s) => s.db);
-  const markInvoiceStatus = useDb((s) => s.markInvoiceStatus);
-  const trainerId = currentUserId!;
-  const invoices = getInvoicesOfTrainer(db, trainerId);
+  const { data: invoices = [] } = useInvoices();
+  const { data: clients = [] } = useClients();
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
+  const clientsById = new Map(clients.map((c) => [c.id, c]));
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todas");
 
   const paid = invoices.filter((i) => i.status === "paid");
@@ -66,7 +64,7 @@ export default function TrainerPayments() {
         <CardBody className="space-y-2">
           {filtered.length === 0 && <p className="text-sm text-slate-400">No hay facturas en esta vista.</p>}
           {filtered.map((inv) => {
-            const client = db.users[inv.clientId];
+            const client = clientsById.get(inv.clientId);
             return (
               <div key={inv.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-100 p-3">
                 <Avatar name={client?.name ?? "?"} size={34} />
@@ -79,7 +77,7 @@ export default function TrainerPayments() {
                 <span className="text-sm font-semibold text-slate-900">{formatCurrency(inv.amount)}</span>
                 <Badge tone={statusTone[inv.status]}>{statusLabel[inv.status]}</Badge>
                 {inv.status !== "paid" && (
-                  <Button variant="secondary" onClick={() => markInvoiceStatus(inv.id, "paid")}>
+                  <Button variant="secondary" onClick={() => updateInvoiceStatus.mutate({ id: inv.id, status: "paid" })}>
                     Marcar pagada
                   </Button>
                 )}

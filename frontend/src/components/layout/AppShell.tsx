@@ -1,8 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
-import { useAuth } from "../../store/auth";
-import { useCurrentDb } from "../../store/db";
+import { logout as apiLogout } from "../../api/auth";
+import { useSession } from "../../store/session";
 import { Avatar } from "../ui/Avatar";
 import { cx } from "../../lib/utils";
 
@@ -13,13 +13,12 @@ export interface NavItem {
 }
 
 export function AppShell({ navItems, brand }: { navItems: NavItem[]; brand: string }) {
-  const db = useCurrentDb();
-  const { currentUserId, logout } = useAuth();
+  const { user, setUser } = useSession();
   const navigate = useNavigate();
-  const user = currentUserId ? db.users[currentUserId] : undefined;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await apiLogout().catch(() => {});
+    setUser(null);
     navigate("/login");
   };
 
