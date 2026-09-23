@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BusinessController;
@@ -106,4 +107,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/form-assignments', [FormAssignmentController::class, 'index']);
     Route::post('/form-assignments/{formAssignment}/submit', [FormAssignmentController::class, 'submit']);
     Route::get('/form-assignments/{formAssignment}/submission', [FormAssignmentController::class, 'submission']);
+
+    // Platform admin
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::get('/overview', [AdminController::class, 'overview']);
+        Route::get('/businesses', [AdminController::class, 'businesses']);
+        Route::get('/businesses/{business}', [AdminController::class, 'businessShow']);
+        Route::get('/trainers', [AdminController::class, 'trainers']);
+        Route::get('/trainers/{trainer}', [AdminController::class, 'trainerShow']);
+    });
 });

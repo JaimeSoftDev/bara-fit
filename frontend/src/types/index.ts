@@ -1,4 +1,4 @@
-export type Role = "trainer" | "client";
+export type Role = "trainer" | "client" | "admin";
 
 export interface BaseUser {
   id: string;
@@ -31,7 +31,13 @@ export interface ClientProfile extends BaseUser {
   logoUrl?: string;
 }
 
-export type AppUser = TrainerProfile | ClientProfile;
+export interface AdminUser extends BaseUser {
+  role: "admin";
+  brandColor?: undefined;
+  logoUrl?: undefined;
+}
+
+export type AppUser = TrainerProfile | ClientProfile | AdminUser;
 
 export type MuscleGroup =
   | "Pecho"
@@ -249,4 +255,46 @@ export interface FormSubmission {
   answers: FormAnswers;
   answerDetails: FormAnswerDetail[];
   submittedAt: string;
+}
+
+export interface AdminOverview {
+  businessCount: number;
+  independentTrainerCount: number;
+  trainerCount: number;
+  clientCount: number;
+  totalRevenue: number;
+}
+
+export interface AdminBusinessMember {
+  id: string;
+  name: string;
+  email: string;
+  role: "owner" | "staff";
+  clientCount: number;
+  revenue: number;
+}
+
+export interface AdminBusiness {
+  id: string;
+  name: string;
+  brandColor?: string;
+  logoUrl?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  memberCount: number;
+  clientCount: number;
+  revenue: number;
+  createdAt: string;
+  members: AdminBusinessMember[];
+}
+
+export interface AdminTrainer {
+  id: string;
+  name: string;
+  email: string;
+  bio: string;
+  specialties: string[];
+  clientCount: number;
+  revenue: number;
+  createdAt: string;
 }

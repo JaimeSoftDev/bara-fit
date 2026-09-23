@@ -22,7 +22,8 @@ export default function Login() {
     try {
       const user = await login(email, password);
       setUser(user);
-      navigate(user.role === "trainer" ? "/trainer" : "/client", { replace: true });
+      const home = user.role === "trainer" ? "/trainer" : user.role === "admin" ? "/admin" : "/client";
+      navigate(home, { replace: true });
     } catch (e) {
       setError(e instanceof ApiError && e.status === 422 ? "Correo o contraseña incorrectos." : "No se pudo iniciar sesión. ¿Está el servidor corriendo?");
     } finally {

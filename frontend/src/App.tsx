@@ -7,6 +7,7 @@ import { RequireRole } from "./components/RequireRole";
 import { SessionBoot } from "./components/SessionBoot";
 import TrainerLayout from "./layouts/TrainerLayout";
 import ClientLayout from "./layouts/ClientLayout";
+import AdminLayout from "./layouts/AdminLayout";
 
 import TrainerDashboard from "./pages/trainer/Dashboard";
 import TrainerClients from "./pages/trainer/Clients";
@@ -29,6 +30,11 @@ import ClientProgress from "./pages/client/Progress";
 import ClientChat from "./pages/client/Chat";
 import ClientPayments from "./pages/client/Payments";
 import ClientForms from "./pages/client/Forms";
+
+import AdminOverview from "./pages/admin/Overview";
+import AdminBusinessDetail from "./pages/admin/BusinessDetail";
+import AdminTrainers from "./pages/admin/Trainers";
+import AdminTrainerDetail from "./pages/admin/TrainerDetail";
 
 function App() {
   return (
@@ -78,6 +84,20 @@ function App() {
           <Route path="chat" element={<ClientChat />} />
           <Route path="payments" element={<ClientPayments />} />
           <Route path="forms" element={<ClientForms />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <RequireRole role="admin">
+              <AdminLayout />
+            </RequireRole>
+          }
+        >
+          <Route index element={<AdminOverview />} />
+          <Route path="businesses/:businessId" element={<AdminBusinessDetail />} />
+          <Route path="trainers" element={<AdminTrainers />} />
+          <Route path="trainers/:trainerId" element={<AdminTrainerDetail />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/login" replace />} />

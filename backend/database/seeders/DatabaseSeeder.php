@@ -468,5 +468,56 @@ class DatabaseSeeder extends Seeder
             'status' => 'pending',
             'assigned_at' => Carbon::now()->subDay(),
         ]);
+
+        // ---------------------------------------------------------------
+        // An independent trainer (no business), with her own client, so the
+        // admin panel has something to show besides BaraFit Gym Central.
+        // ---------------------------------------------------------------
+        $sofia = User::create([
+            'name' => 'Sofía Navarro',
+            'email' => 'sofia@barafit.app',
+            'password' => Hash::make('password'),
+            'role' => 'trainer',
+        ]);
+        TrainerProfile::create([
+            'user_id' => $sofia->id,
+            'specialties' => ['Crossfit', 'Nutrición deportiva'],
+            'bio' => 'Entrenadora independiente especializada en crossfit y planificación nutricional.',
+        ]);
+
+        $diego = User::create([
+            'name' => 'Diego Herrera',
+            'email' => 'diego@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'client',
+        ]);
+        ClientProfile::create([
+            'user_id' => $diego->id,
+            'trainer_id' => $sofia->id,
+            'goal' => 'Preparación de competición amateur',
+            'height_cm' => 178,
+            'start_weight_kg' => 82,
+        ]);
+
+        Invoice::create([
+            'trainer_id' => $sofia->id,
+            'client_id' => $diego->id,
+            'concept' => 'Plan mensual de entrenamiento',
+            'amount' => 60.00,
+            'status' => 'paid',
+            'issued_at' => Carbon::now()->subDays(15)->toDateString(),
+            'due_date' => Carbon::now()->subDays(1)->toDateString(),
+            'paid_at' => Carbon::now()->subDays(10)->toDateString(),
+        ]);
+
+        // ---------------------------------------------------------------
+        // Platform admin: sees every business and independent trainer.
+        // ---------------------------------------------------------------
+        User::create([
+            'name' => 'Admin BaraFit',
+            'email' => 'admin@barafit.app',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+        ]);
     }
 }
