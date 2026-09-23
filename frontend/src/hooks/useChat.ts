@@ -1,21 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMyConversation, getOrCreateConversation, listConversations, listMessages, sendMessage } from "../api/chat";
+import { listConversations, listMessages, sendMessage } from "../api/chat";
 
 export function useConversations() {
   return useQuery({ queryKey: ["conversations"], queryFn: listConversations });
 }
 
 export function useConversationWith(clientId: string | undefined) {
-  return useQuery({
-    queryKey: ["conversations", "with", clientId],
-    queryFn: () => getOrCreateConversation(clientId!),
-    enabled: !!clientId,
-    staleTime: Infinity,
-  });
+  const { data: conversations, ...rest } = useConversations();
+  return { data: conversations?.find((c) => c.clientId === clientId), ...rest };
 }
 
 export function useMyConversation() {
-  return useQuery({ queryKey: ["conversations", "mine"], queryFn: getMyConversation, staleTime: Infinity });
+  const { data: conversations, ...rest } = useConversations();
+  return { data: conversations?.[0], ...rest };
 }
 
 export function useMessages(conversationId: string | undefined) {

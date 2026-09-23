@@ -2,7 +2,7 @@
 
 Laravel 13 API backend for **BaraFit**, a fitness-coaching PWA with two roles
 (`trainer`, `client`). Built to replace a browser-only localStorage mock in
-the sibling React/Vite frontend (`../src`). Authentication is Sanctum in
+the sibling React/Vite frontend (`../frontend`). Authentication is Sanctum in
 **token mode** (Bearer tokens) — there is no cookie/session assumption, so a
 separately-hosted frontend can talk to this API from any origin.
 
@@ -68,6 +68,7 @@ header; everything else requires `Authorization: Bearer <token>`.
 **Workout plans**
 - `GET/POST /workout-plans` (filter `?clientId=`)
 - `GET/PUT /workout-plans/{id}` — PUT replaces the whole `days`/`items` tree transactionally
+- `GET /workout-plans/{id}/completions` — list completions for the plan
 - `POST /workout-plans/{id}/completions` (client) — `{dayId, date, completedItemIds}`, upserts
 
 **Nutrition plans**
@@ -76,6 +77,7 @@ header; everything else requires `Authorization: Bearer <token>`.
 
 **Bookings**
 - `GET /bookings` — trainer: theirs; client: ones they attend
+- `GET /bookings/available` (client) — upcoming group classes from their trainer with open spots they haven't joined
 - `POST /bookings` — supports `capacity` (group classes) and `recurrence: {freq:"weekly", until}` (creates one booking per week sharing a `seriesId`)
 - `PATCH /bookings/{id}` — status/details
 - `DELETE /bookings/{id}` — single occurrence

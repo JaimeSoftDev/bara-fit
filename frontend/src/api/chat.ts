@@ -12,11 +12,3 @@ export function listMessages(conversationId: string): Promise<Message[]> {
 export function sendMessage(conversationId: string, text: string): Promise<Message> {
   return api.post<Message>(`/conversations/${conversationId}/messages`, { text });
 }
-
-export function getOrCreateConversation(clientId: string): Promise<Conversation> {
-  return api.post<Conversation>("/conversations", { clientId });
-}
-
-export function getMyConversation(): Promise<Conversation> {
-  return api.post<Conversation>("/conversations", {});
-}

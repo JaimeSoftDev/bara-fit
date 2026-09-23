@@ -85,6 +85,23 @@ class WorkoutPlanController extends Controller
         return new WorkoutPlanResource($workoutPlan->fresh()->load('days.items'));
     }
 
+    public function completions(Request $request, WorkoutPlan $workoutPlan)
+    {
+        $this->authorize('view', $workoutPlan);
+
+        return WorkoutCompletion::where('plan_id', $workoutPlan->id)
+            ->get()
+            ->map(fn (WorkoutCompletion $c) => [
+                'id' => (string) $c->id,
+                'clientId' => (string) $c->client_id,
+                'planId' => (string) $c->plan_id,
+                'dayId' => (string) $c->day_id,
+                'date' => $c->date->toDateString(),
+                'completedItemIds' => $c->completed_item_ids ?? [],
+            ])
+            ->values();
+    }
+
     public function storeCompletion(Request $request, WorkoutPlan $workoutPlan)
     {
         $this->authorize('recordCompletion', $workoutPlan);

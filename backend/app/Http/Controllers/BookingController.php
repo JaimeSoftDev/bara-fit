@@ -35,6 +35,32 @@ class BookingController extends Controller
         return BookingResource::collection($bookings);
     }
 
+    /**
+     * Upcoming group classes from the client's own trainer that still have
+     * open spots and the client hasn't joined yet.
+     */
+    public function available(Request $request)
+    {
+        $user = $request->user();
+        abort_unless($user->isClient(), 403);
+
+        $trainerId = $user->clientProfile?->trainer_id;
+
+        $bookings = Booking::where('trainer_id', $trainerId)
+            ->where('type', 'class')
+            ->where('status', '!=', 'cancelled')
+            ->where('starts_at', '>=', now())
+            ->whereDoesntHave('attendees', fn ($q) => $q->where('users.id', $user->id)
+                ->where('booking_attendees.status', '!=', 'cancelled'))
+            ->with('attendees.clientProfile')
+            ->orderBy('starts_at')
+            ->get()
+            ->filter(fn (Booking $booking) => $booking->capacity === null || $booking->activeAttendees()->count() < $booking->capacity)
+            ->values();
+
+        return BookingResource::collection($bookings);
+    }
+
     public function store(Request $request)
     {
         $this->authorize('create', Booking::class);

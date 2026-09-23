@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workout-plans', [WorkoutPlanController::class, 'store']);
     Route::get('/workout-plans/{workoutPlan}', [WorkoutPlanController::class, 'show']);
     Route::put('/workout-plans/{workoutPlan}', [WorkoutPlanController::class, 'update']);
+    Route::get('/workout-plans/{workoutPlan}/completions', [WorkoutPlanController::class, 'completions']);
     Route::post('/workout-plans/{workoutPlan}/completions', [WorkoutPlanController::class, 'storeCompletion']);
 
     // Nutrition plans
@@ -46,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/bookings/available', [BookingController::class, 'available']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::patch('/bookings/{booking}', [BookingController::class, 'update']);
     Route::delete('/bookings/series/{seriesId}', [BookingController::class, 'destroySeries']);
