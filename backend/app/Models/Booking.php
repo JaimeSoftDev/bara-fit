@@ -28,7 +28,7 @@ class Booking extends Model
     public function attendees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'booking_attendees', 'booking_id', 'client_id')
-            ->withPivot('status')
+            ->withPivot('status', 'checked_in_at')
             ->withTimestamps();
     }
 

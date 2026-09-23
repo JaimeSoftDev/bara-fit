@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import InviteAccept from "./pages/InviteAccept";
+import TeamInviteAccept from "./pages/TeamInviteAccept";
 import { RequireRole } from "./components/RequireRole";
 import { SessionBoot } from "./components/SessionBoot";
 import TrainerLayout from "./layouts/TrainerLayout";
@@ -15,6 +16,9 @@ import TrainerCalendar from "./pages/trainer/Calendar";
 import TrainerPayments from "./pages/trainer/Payments";
 import TrainerChatList from "./pages/trainer/ChatList";
 import TrainerChatThread from "./pages/trainer/ChatThread";
+import TrainerSettings from "./pages/trainer/Settings";
+import TeamCalendar from "./pages/trainer/TeamCalendar";
+import Payroll from "./pages/trainer/Payroll";
 
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientWorkout from "./pages/client/Workout";
@@ -32,6 +36,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/invite/:token" element={<InviteAccept />} />
+        <Route path="/team-invite/:token" element={<TeamInviteAccept />} />
 
         <Route
           path="/trainer"
@@ -49,6 +54,9 @@ function App() {
           <Route path="payments" element={<TrainerPayments />} />
           <Route path="chat" element={<TrainerChatList />} />
           <Route path="chat/:clientId" element={<TrainerChatThread />} />
+          <Route path="settings" element={<TrainerSettings />} />
+          <Route path="team/calendar" element={<TeamCalendar />} />
+          <Route path="team/payroll" element={<Payroll />} />
         </Route>
 
         <Route

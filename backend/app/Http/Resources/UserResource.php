@@ -24,9 +24,14 @@ class UserResource extends JsonResource
         ];
 
         if ($this->role === 'trainer' && $this->relationLoaded('trainerProfile') && $this->trainerProfile) {
-            $data['specialties'] = $this->trainerProfile->specialties ?? [];
-            $data['bio'] = $this->trainerProfile->bio;
-            $data['brandColor'] = $this->trainerProfile->brand_color;
+            $profile = $this->trainerProfile;
+            $data['specialties'] = $profile->specialties ?? [];
+            $data['bio'] = $profile->bio;
+            $data['brandColor'] = $profile->effectiveBrandColor();
+            $data['logoUrl'] = $profile->effectiveLogoUrl();
+            $data['businessId'] = $profile->business_id ? (string) $profile->business_id : null;
+            $data['businessName'] = $profile->relationLoaded('business') ? $profile->business?->name : null;
+            $data['businessRole'] = $profile->business_role;
         }
 
         if ($this->role === 'client' && $this->relationLoaded('clientProfile') && $this->clientProfile) {
@@ -35,6 +40,12 @@ class UserResource extends JsonResource
             $data['heightCm'] = $this->clientProfile->height_cm;
             $data['startWeightKg'] = $this->clientProfile->start_weight_kg;
             $data['birthDate'] = optional($this->clientProfile->birth_date)->toDateString();
+
+            $trainerProfile = $this->clientProfile->relationLoaded('trainer')
+                ? $this->clientProfile->trainer?->trainerProfile
+                : null;
+            $data['brandColor'] = $trainerProfile?->effectiveBrandColor();
+            $data['logoUrl'] = $trainerProfile?->effectiveLogoUrl();
         }
 
         return $data;

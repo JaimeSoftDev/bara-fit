@@ -38,7 +38,7 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth')->plainTextToken;
-        $user->load('trainerProfile');
+        $user->load('trainerProfile.business');
 
         return response()->json([
             'token' => $token,
@@ -62,7 +62,7 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth')->plainTextToken;
-        $user->load(['trainerProfile', 'clientProfile']);
+        $user->load(['trainerProfile.business', 'clientProfile.trainer.trainerProfile.business']);
 
         return response()->json([
             'token' => $token,
@@ -79,7 +79,68 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        $user = $request->user()->load(['trainerProfile', 'clientProfile']);
+        $user = $request->user()->load(['trainerProfile.business', 'clientProfile.trainer.trainerProfile.business']);
+
+        return new UserResource($user);
+    }
+
+    /** Trainer updates their own profile: bio, specialties, and personal branding (used when not on a team, or as their fallback). */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        abort_unless($user->isTrainer(), 403);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'bio' => ['nullable', 'string'],
+            'specialties' => ['sometimes', 'array'],
+            'specialties.*' => ['string'],
+            'brandColor' => ['nullable', 'string', 'max:32'],
+            'logoUrl' => ['nullable', 'url'],
+        ]);
+
+        if (array_key_exists('name', $data)) {
+            $user->update(['name' => $data['name']]);
+        }
+
+        $profile = $user->trainerProfile;
+        $profile->update([
+            'bio' => array_key_exists('bio', $data) ? $data['bio'] : $profile->bio,
+            'specialties' => $data['specialties'] ?? $profile->specialties,
+            'brand_color' => array_key_exists('brandColor', $data) ? $data['brandColor'] : $profile->brand_color,
+            'logo_url' => array_key_exists('logoUrl', $data) ? $data['logoUrl'] : $profile->logo_url,
+        ]);
+
+        $user->load('trainerProfile.business');
+
+        return new UserResource($user);
+    }
+
+    /**
+     * Upload a logo image. If the trainer owns a business, it becomes the
+     * team's shared logo; otherwise it's their own personal fallback logo.
+     */
+    public function uploadLogo(Request $request)
+    {
+        $user = $request->user();
+        abort_unless($user->isTrainer(), 403);
+
+        $request->validate([
+            'logo' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $path = $request->file('logo')->store('brand-logos', 'public');
+        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+
+        $profile = $user->trainerProfile;
+
+        if ($profile->business_id && $profile->isBusinessOwner()) {
+            $profile->business->update(['logo_url' => $url]);
+        } else {
+            $profile->update(['logo_url' => $url]);
+        }
+
+        $user->load('trainerProfile.business');
 
         return new UserResource($user);
     }

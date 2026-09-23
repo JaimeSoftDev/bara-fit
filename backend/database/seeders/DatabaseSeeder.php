@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\Booking;
+use App\Models\Business;
 use App\Models\ClientProfile;
 use App\Models\Conversation;
 use App\Models\Exercise;
 use App\Models\Invoice;
 use App\Models\NutritionPlan;
+use App\Models\PayrollEntry;
 use App\Models\ProgressEntry;
 use App\Models\TrainerProfile;
 use App\Models\User;
@@ -199,7 +201,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'completed',
             'location' => 'Parque del Retiro',
         ]);
-        $completedSession->attendees()->attach($paula->id, ['status' => 'confirmed']);
+        $completedSession->attendees()->attach($paula->id, ['status' => 'confirmed', 'checked_in_at' => Carbon::now()->subDays(4)->setTime(8, 3)]);
 
         // Recurring weekly group class, 4 weekly occurrences, capacity 6, 2 attendees.
         $seriesId = (string) Str::uuid();
@@ -318,6 +320,64 @@ class DatabaseSeeder extends Seeder
             'status' => 'pending',
             'issued_at' => Carbon::now()->subDays(1)->toDateString(),
             'due_date' => Carbon::now()->addDays(14)->toDateString(),
+        ]);
+
+        // ---------------------------------------------------------------
+        // Business/team: Carlos owns "BaraFit Gym Central", Ana is staff.
+        // Demonstrates the shared team calendar and payroll.
+        // ---------------------------------------------------------------
+        $business = Business::create([
+            'owner_id' => $carlos->id,
+            'name' => 'BaraFit Gym Central',
+            'brand_color' => '#0ea5e9',
+        ]);
+
+        $carlos->trainerProfile->update([
+            'business_id' => $business->id,
+            'business_role' => 'owner',
+        ]);
+
+        $ana = User::create([
+            'name' => 'Ana Torres',
+            'email' => 'ana@barafit.app',
+            'password' => Hash::make('password'),
+            'role' => 'trainer',
+        ]);
+        TrainerProfile::create([
+            'user_id' => $ana->id,
+            'business_id' => $business->id,
+            'business_role' => 'staff',
+            'specialties' => ['Yoga', 'Movilidad'],
+            'bio' => 'Instructora de yoga y movilidad, parte del equipo de BaraFit Gym Central.',
+        ]);
+
+        // A booking on Ana's own agenda, visible in the shared team calendar.
+        $anaClass = Booking::create([
+            'trainer_id' => $ana->id,
+            'title' => 'Yoga y movilidad',
+            'type' => 'class',
+            'starts_at' => Carbon::now()->addDays(2)->setTime(9, 0),
+            'ends_at' => Carbon::now()->addDays(2)->setTime(10, 0),
+            'status' => 'confirmed',
+            'location' => 'Sala grupal — BaraFit Gym',
+            'capacity' => 8,
+        ]);
+        $anaClass->attendees()->attach($lucia->id, ['status' => 'confirmed']);
+
+        PayrollEntry::create([
+            'business_id' => $business->id,
+            'trainer_id' => $ana->id,
+            'period_label' => 'Agosto 2026',
+            'amount' => 950.00,
+            'status' => 'paid',
+            'paid_at' => Carbon::now()->subDays(20),
+        ]);
+        PayrollEntry::create([
+            'business_id' => $business->id,
+            'trainer_id' => $ana->id,
+            'period_label' => 'Septiembre 2026',
+            'amount' => 980.00,
+            'status' => 'pending',
         ]);
     }
 }

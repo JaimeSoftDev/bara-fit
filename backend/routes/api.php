@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\BusinessInviteController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ExerciseController;
@@ -17,11 +19,15 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/invites/{token}', [InviteController::class, 'show']);
 Route::post('/invites/{token}/accept', [InviteController::class, 'accept']);
+Route::get('/team-invites/{token}', [BusinessInviteController::class, 'show']);
+Route::post('/team-invites/{token}/accept', [BusinessInviteController::class, 'accept']);
 
 // ---- Authenticated ----
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::patch('/me/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/me/logo', [AuthController::class, 'uploadLogo']);
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index']);
@@ -54,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy']);
     Route::post('/bookings/{booking}/attendees', [BookingController::class, 'addAttendee']);
     Route::delete('/bookings/{booking}/attendees/{client}', [BookingController::class, 'removeAttendee']);
+    Route::post('/bookings/{booking}/attendees/{client}/check-in', [BookingController::class, 'checkIn']);
 
     // Progress entries
     Route::get('/progress-entries', [ProgressEntryController::class, 'index']);
@@ -68,4 +75,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::patch('/invoices/{invoice}', [InvoiceController::class, 'update']);
+
+    // Businesses / teams
+    Route::post('/businesses', [BusinessController::class, 'store']);
+    Route::get('/businesses/me', [BusinessController::class, 'me']);
+    Route::patch('/businesses/{business}', [BusinessController::class, 'update']);
+    Route::post('/businesses/{business}/invite', [BusinessController::class, 'invite']);
+    Route::get('/businesses/{business}/calendar', [BusinessController::class, 'calendar']);
+    Route::get('/businesses/{business}/payroll', [BusinessController::class, 'payrollIndex']);
+    Route::post('/businesses/{business}/payroll', [BusinessController::class, 'payrollStore']);
+    Route::patch('/businesses/{business}/payroll/{payrollEntry}', [BusinessController::class, 'payrollUpdate']);
 });

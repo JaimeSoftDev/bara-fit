@@ -44,3 +44,7 @@ export function joinBooking(id: string, clientId?: string): Promise<Booking> {
 export function leaveBooking(id: string, clientId: string): Promise<void> {
   return api.delete(`/bookings/${id}/attendees/${clientId}`);
 }
+
+export function checkInAttendee(id: string, clientId: string, checkedIn = true): Promise<Booking> {
+  return api.post<Booking>(`/bookings/${id}/attendees/${clientId}/check-in`, { checkedIn });
+}

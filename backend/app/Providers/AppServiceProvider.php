@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Booking;
+use App\Models\Business;
 use App\Models\ClientProfile;
 use App\Models\Conversation;
 use App\Models\Exercise;
@@ -11,6 +12,7 @@ use App\Models\NutritionPlan;
 use App\Models\ProgressEntry;
 use App\Models\WorkoutPlan;
 use App\Policies\BookingPolicy;
+use App\Policies\BusinessPolicy;
 use App\Policies\ClientProfilePolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\ExercisePolicy;
@@ -44,5 +46,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Conversation::class, ConversationPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(ClientProfile::class, ClientProfilePolicy::class);
+        Gate::policy(Business::class, BusinessPolicy::class);
     }
 }

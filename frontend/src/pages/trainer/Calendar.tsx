@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Repeat, UserPlus, Users, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, Repeat, UserPlus, Users, X } from "lucide-react";
 import { formatISO } from "date-fns";
 import { useClients } from "../../hooks/useClients";
 import {
+  useCheckInAttendee,
   useCreateBooking,
   useDeleteBookingSeries,
   useJoinBooking,
@@ -41,6 +42,7 @@ export default function TrainerCalendar() {
   const deleteSeries = useDeleteBookingSeries();
   const joinBooking = useJoinBooking();
   const leaveBooking = useLeaveBooking();
+  const checkIn = useCheckInAttendee();
 
   const [anchor, setAnchor] = useState(() => new Date());
   const [showModal, setShowModal] = useState(false);
@@ -114,7 +116,7 @@ export default function TrainerCalendar() {
   }
 
   const nonAttendingClients = attendeePicker
-    ? clients.filter((c) => !attendeePicker.attendees.some((a) => a.clientId === c.id))
+    ? clients.filter((c) => !attendeePicker.attendees.some((a) => a.id === c.id))
     : [];
 
   return (
@@ -200,7 +202,23 @@ export default function TrainerCalendar() {
                         </div>
                       )}
                       {b.type === "session" && b.attendees[0] && (
-                        <p className="truncate text-[11px] text-slate-500">{b.attendees[0].name}</p>
+                        <button
+                          onClick={() =>
+                            checkIn.mutate({
+                              id: b.id,
+                              clientId: b.attendees[0].id,
+                              checkedIn: !b.attendees[0].checkedInAt,
+                            })
+                          }
+                          className={cx(
+                            "flex items-center gap-1 truncate text-[11px]",
+                            b.attendees[0].checkedInAt ? "text-emerald-600" : "text-slate-500 hover:text-brand-600",
+                          )}
+                          title={b.attendees[0].checkedInAt ? "Asistió — click para desmarcar" : "Marcar asistencia"}
+                        >
+                          <Check size={11} className={cx(!b.attendees[0].checkedInAt && "opacity-30")} />
+                          {b.attendees[0].name}
+                        </button>
                       )}
                       {b.status === "confirmed" && (
                         <div className="flex gap-2 pt-1">
@@ -304,10 +322,27 @@ export default function TrainerCalendar() {
             {attendeePicker.attendees.length > 0 && (
               <div className="mb-3 space-y-1.5">
                 {attendeePicker.attendees.map((a) => (
-                  <div key={a.clientId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    {a.name}
+                  <div key={a.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          checkIn.mutate({ id: attendeePicker.id, clientId: a.id, checkedIn: !a.checkedInAt })
+                        }
+                        className={cx(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                          a.checkedInAt
+                            ? "border-emerald-500 bg-emerald-500 text-white"
+                            : "border-slate-300 text-transparent",
+                        )}
+                        aria-label={a.checkedInAt ? "Quitar asistencia" : "Marcar asistencia"}
+                        title={a.checkedInAt ? "Asistió" : "Marcar como asistido"}
+                      >
+                        <Check size={12} />
+                      </button>
+                      {a.name}
+                    </div>
                     <button
-                      onClick={() => leaveBooking.mutate({ id: attendeePicker.id, clientId: a.clientId })}
+                      onClick={() => leaveBooking.mutate({ id: attendeePicker.id, clientId: a.id })}
                       className="text-slate-400 hover:text-red-500"
                     >
                       <X size={14} />

@@ -14,6 +14,7 @@ class BookingResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'trainerId' => (string) $this->trainer_id,
+            'trainerName' => $this->whenLoaded('trainer', fn () => $this->trainer->name),
             'title' => $this->title,
             'type' => $this->type,
             'startsAt' => optional($this->starts_at)->toIso8601String(),
@@ -29,7 +30,12 @@ class BookingResource extends JsonResource
             'attendees' => $this->whenLoaded('attendees', fn () => $this->attendees
                 ->where('pivot.status', '!=', 'cancelled')
                 ->values()
-                ->map(fn ($client) => (new UserResource($client))->resolve())),
+                ->map(fn ($client) => [
+                    ...(new UserResource($client))->resolve(),
+                    'checkedInAt' => $client->pivot->checked_in_at
+                        ? \Illuminate\Support\Carbon::parse($client->pivot->checked_in_at)->toIso8601String()
+                        : null,
+                ])),
         ];
     }
 }

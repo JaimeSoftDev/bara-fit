@@ -246,6 +246,25 @@ class BookingController extends Controller
         return new BookingResource($booking->fresh()->load('attendees.clientProfile'));
     }
 
+    /** Trainer marks a client as checked in (present) for a session/class. */
+    public function checkIn(Request $request, Booking $booking, User $client)
+    {
+        $this->authorize('update', $booking);
+
+        $existing = $booking->attendees()->where('users.id', $client->id)->first();
+        abort_unless($existing, 404);
+
+        $data = $request->validate([
+            'checkedIn' => ['sometimes', 'boolean'],
+        ]);
+
+        $booking->attendees()->updateExistingPivot($client->id, [
+            'checked_in_at' => ($data['checkedIn'] ?? true) ? now() : null,
+        ]);
+
+        return new BookingResource($booking->fresh()->load('attendees.clientProfile'));
+    }
+
     /**
      * @return array<int, array{0: Carbon, 1: Carbon}>
      */

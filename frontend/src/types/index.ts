@@ -14,6 +14,10 @@ export interface TrainerProfile extends BaseUser {
   specialties: string[];
   bio: string;
   brandColor?: string;
+  logoUrl?: string;
+  businessId?: string;
+  businessName?: string;
+  businessRole?: "owner" | "staff";
 }
 
 export interface ClientProfile extends BaseUser {
@@ -23,6 +27,8 @@ export interface ClientProfile extends BaseUser {
   heightCm: number;
   startWeightKg: number;
   birthDate?: string;
+  brandColor?: string;
+  logoUrl?: string;
 }
 
 export type AppUser = TrainerProfile | ClientProfile;
@@ -113,9 +119,10 @@ export type BookingStatus = "confirmed" | "pending" | "cancelled" | "completed";
 export type AttendeeStatus = "confirmed" | "pending" | "cancelled";
 
 export interface BookingAttendee {
-  clientId: string;
+  id: string;
   name: string;
   status: AttendeeStatus;
+  checkedInAt?: string;
 }
 
 export interface Recurrence {
@@ -126,6 +133,7 @@ export interface Recurrence {
 export interface Booking {
   id: string;
   trainerId: string;
+  trainerName?: string;
   title: string;
   type: BookingType;
   startsAt: string; // ISO datetime

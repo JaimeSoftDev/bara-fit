@@ -35,3 +35,19 @@ export async function logout(): Promise<void> {
 export function me(): Promise<AppUser> {
   return api.get<AppUser>("/me");
 }
+
+export function updateProfile(input: {
+  name?: string;
+  bio?: string;
+  specialties?: string[];
+  brandColor?: string | null;
+  logoUrl?: string | null;
+}): Promise<AppUser> {
+  return api.patch<AppUser>("/me/profile", input);
+}
+
+export function uploadLogo(file: File): Promise<AppUser> {
+  const form = new FormData();
+  form.append("logo", file);
+  return api.postForm<AppUser>("/me/logo", form);
+}
