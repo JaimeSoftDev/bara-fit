@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { LogOut } from "lucide-react";
+import { Bell, BellOff, BellRing, LogOut } from "lucide-react";
 import { logout as apiLogout } from "../../api/auth";
 import { useSession } from "../../store/session";
+import { usePush } from "../../hooks/usePush";
 import { Avatar } from "../ui/Avatar";
 import { cx } from "../../lib/utils";
 import { applyBrandColor } from "../../lib/brandTheme";
@@ -38,6 +39,7 @@ function BrandBadge({ logoUrl, size }: { logoUrl?: string; size: number }) {
 export function AppShell({ navItems, brand }: { navItems: NavItem[]; brand: string }) {
   const { user, setUser } = useSession();
   const navigate = useNavigate();
+  const push = usePush();
 
   useEffect(() => {
     applyBrandColor(user?.brandColor);
@@ -89,6 +91,36 @@ export function AppShell({ navItems, brand }: { navItems: NavItem[]; brand: stri
                 <p className="truncate text-xs text-slate-400">{user.email}</p>
               </div>
             </div>
+            {push.status.supported && (
+              <div className="mb-2">
+                {push.status.permission === "denied" ? (
+                  <button
+                    disabled
+                    title="Activa las notificaciones desde los ajustes del navegador para este sitio."
+                    className="flex w-full cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300"
+                  >
+                    <BellOff size={16} /> Notificaciones bloqueadas
+                  </button>
+                ) : push.status.subscribed ? (
+                  <button
+                    onClick={() => push.unsubscribe()}
+                    disabled={push.loading}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+                  >
+                    <BellRing size={16} /> {push.loading ? "Desactivando…" : "Notificaciones activadas"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => push.subscribe()}
+                    disabled={push.loading}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-60"
+                  >
+                    <Bell size={16} /> {push.loading ? "Activando…" : "Activar notificaciones"}
+                  </button>
+                )}
+                {push.error && <p className="px-3 pt-1 text-xs text-red-500">{push.error}</p>}
+              </div>
+            )}
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"

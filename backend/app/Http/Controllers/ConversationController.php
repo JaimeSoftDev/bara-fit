@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ConversationResource;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
+use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ConversationController extends Controller
 {
@@ -54,11 +58,33 @@ class ConversationController extends Controller
             'text' => ['required', 'string'],
         ]);
 
+        $sender = $request->user();
+
         $message = $conversation->messages()->create([
-            'sender_id' => $request->user()->id,
+            'sender_id' => $sender->id,
             'text' => $data['text'],
         ]);
 
+        $this->notifyRecipient($conversation, $sender, $message->text);
+
         return (new MessageResource($message))->response()->setStatusCode(201);
+    }
+
+    private function notifyRecipient(Conversation $conversation, User $sender, string $text): void
+    {
+        try {
+            $isSenderTrainer = $sender->id === $conversation->trainer_id;
+            $recipient = $isSenderTrainer ? $conversation->client : $conversation->trainer;
+
+            if (! $recipient) {
+                return;
+            }
+
+            $url = $isSenderTrainer ? '/client/chat' : "/trainer/chat/{$conversation->client_id}";
+
+            $recipient->notify(new NewMessageNotification($sender->name, $text, $url));
+        } catch (Throwable $e) {
+            Log::warning('Failed to send new message push notification.', ['exception' => $e]);
+        }
     }
 }

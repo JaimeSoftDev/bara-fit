@@ -11,6 +11,7 @@ use App\Http\Controllers\InviteController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NutritionPlanController;
 use App\Http\Controllers\ProgressEntryController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WorkoutPlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,7 @@ Route::get('/invites/{token}', [InviteController::class, 'show']);
 Route::post('/invites/{token}/accept', [InviteController::class, 'accept']);
 Route::get('/team-invites/{token}', [BusinessInviteController::class, 'show']);
 Route::post('/team-invites/{token}/accept', [BusinessInviteController::class, 'accept']);
+Route::get('/push/vapid-public-key', [PushSubscriptionController::class, 'vapidPublicKey']);
 
 // ---- Authenticated ----
 Route::middleware('auth:sanctum')->group(function () {
@@ -85,4 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/businesses/{business}/payroll', [BusinessController::class, 'payrollIndex']);
     Route::post('/businesses/{business}/payroll', [BusinessController::class, 'payrollStore']);
     Route::patch('/businesses/{business}/payroll/{payrollEntry}', [BusinessController::class, 'payrollUpdate']);
+
+    // Push subscriptions
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
 });

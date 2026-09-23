@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\User;
+use App\Notifications\BookingStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class BookingController extends Controller
 {
@@ -138,6 +141,12 @@ class BookingController extends Controller
 
         $bookings->each->load('attendees.clientProfile');
 
+        foreach ($bookings as $booking) {
+            if ($booking->status === 'confirmed') {
+                $this->notifyAttendees($booking, 'confirmed');
+            }
+        }
+
         if ($bookings->count() > 1) {
             return BookingResource::collection($bookings)->response()->setStatusCode(201);
         }
@@ -158,6 +167,8 @@ class BookingController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        $previousStatus = $booking->status;
+
         $booking->update([
             'status' => $data['status'] ?? $booking->status,
             'title' => $data['title'] ?? $booking->title,
@@ -167,7 +178,13 @@ class BookingController extends Controller
             'notes' => array_key_exists('notes', $data) ? $data['notes'] : $booking->notes,
         ]);
 
-        return new BookingResource($booking->load('attendees.clientProfile'));
+        $booking->load('attendees.clientProfile');
+
+        if (in_array($booking->status, ['confirmed', 'cancelled'], true) && $booking->status !== $previousStatus) {
+            $this->notifyAttendees($booking, $booking->status);
+        }
+
+        return new BookingResource($booking);
     }
 
     public function destroy(Request $request, Booking $booking)
@@ -288,5 +305,19 @@ class BookingController extends Controller
         }
 
         return $occurrences;
+    }
+
+    /**
+     * @param  'confirmed'|'cancelled'  $status
+     */
+    private function notifyAttendees(Booking $booking, string $status): void
+    {
+        try {
+            foreach ($booking->attendees->where('pivot.status', '!=', 'cancelled') as $attendee) {
+                $attendee->notify(new BookingStatusNotification($booking->title, $status, '/client/calendar'));
+            }
+        } catch (Throwable $e) {
+            Log::warning('Failed to send booking status push notification.', ['exception' => $e]);
+        }
     }
 }
