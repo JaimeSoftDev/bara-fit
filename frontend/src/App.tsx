@@ -19,6 +19,7 @@ import TrainerChatThread from "./pages/trainer/ChatThread";
 import TrainerSettings from "./pages/trainer/Settings";
 import TeamCalendar from "./pages/trainer/TeamCalendar";
 import Payroll from "./pages/trainer/Payroll";
+import TrainerForms from "./pages/trainer/Forms";
 
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientWorkout from "./pages/client/Workout";
@@ -27,6 +28,7 @@ import ClientCalendar from "./pages/client/Calendar";
 import ClientProgress from "./pages/client/Progress";
 import ClientChat from "./pages/client/Chat";
 import ClientPayments from "./pages/client/Payments";
+import ClientForms from "./pages/client/Forms";
 
 function App() {
   return (
@@ -57,6 +59,7 @@ function App() {
           <Route path="settings" element={<TrainerSettings />} />
           <Route path="team/calendar" element={<TeamCalendar />} />
           <Route path="team/payroll" element={<Payroll />} />
+          <Route path="forms" element={<TrainerForms />} />
         </Route>
 
         <Route
@@ -74,6 +77,7 @@ function App() {
           <Route path="progress" element={<ClientProgress />} />
           <Route path="chat" element={<ClientChat />} />
           <Route path="payments" element={<ClientPayments />} />
+          <Route path="forms" element={<ClientForms />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/login" replace />} />

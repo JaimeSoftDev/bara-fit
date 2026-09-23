@@ -1,4 +1,4 @@
-import { Apple, CalendarDays, Dumbbell, Home, LineChart, MessageCircle, Wallet } from "lucide-react";
+import { Apple, CalendarDays, ClipboardList, Dumbbell, Home, LineChart, MessageCircle, Wallet } from "lucide-react";
 import { AppShell, type NavItem } from "../components/layout/AppShell";
 
 const navItems: NavItem[] = [
@@ -9,6 +9,7 @@ const navItems: NavItem[] = [
   { to: "/client/chat", label: "Chat", icon: MessageCircle },
   { to: "/client/calendar", label: "Agenda", icon: CalendarDays },
   { to: "/client/payments", label: "Pagos", icon: Wallet },
+  { to: "/client/forms", label: "Formularios", icon: ClipboardList },
 ];
 
 export default function ClientLayout() {

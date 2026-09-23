@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutDashboard, MessageCircle, Users, Wallet, Dumbbell, Settings } from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutDashboard, MessageCircle, Users, Wallet, Dumbbell, Settings } from "lucide-react";
 import { AppShell, type NavItem } from "../components/layout/AppShell";
 
 const navItems: NavItem[] = [
@@ -8,6 +8,7 @@ const navItems: NavItem[] = [
   { to: "/trainer/payments", label: "Pagos", icon: Wallet },
   { to: "/trainer/chat", label: "Chat", icon: MessageCircle },
   { to: "/trainer/exercises", label: "Ejercicios", icon: Dumbbell },
+  { to: "/trainer/forms", label: "Formularios", icon: ClipboardList },
   { to: "/trainer/settings", label: "Ajustes", icon: Settings },
 ];
 
